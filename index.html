@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Quarry Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <!-- Legend Box -->
+<div id="map-legend">
+  <div><span class="legend-color" style="background-color: #a52714;"></span> Unkown</div>
+  <div><span class="legend-color" style="background-color: #f4a300;"></span> International</div>
+</div>
+
+
+  <!-- Region Filter Box -->
+    <div id="region-filter-box">
+    <form id="region-form"></form>
+    </div>
+
+
+  <!-- Moved Layer Control Box (will appear below the icon) -->
+  <div id="layer-box-wrapper"></div>
+
+  <!-- Custom Layer Toggle Icon -->
+  <div id="custom-layer-toggle" title="Toggle Layer Menu">
+    <img src="layer-icon.png" alt="Layers">
+  </div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<!-- Your GeoJSON Data -->
+<script src="quarries.js"></script>
+<!-- Your map logic -->
+<script src="map.js"></script>
+
+</body>
+</html>
