@@ -52,53 +52,6 @@ function populateRegionFilter(regionList) {
 // -----------------------
 let currentLayer;
 
-function showQuarriesByRegion(region) {
-  if (currentLayer) {
-    map.removeLayer(currentLayer);
-  }
-
-  const filteredFeatures = region === "all"
-    ? quarriesData.features
-    : quarriesData.features.filter(f => {
-        const match = f.properties?.name?.match(/Region:\s*([^\n]+)/);
-        return match && match[1].trim() === region;
-      });
-
-  currentLayer = L.geoJSON({ type: "FeatureCollection", features: filteredFeatures }, {
-    onEachFeature: function (feature, layer) {
-      if (feature.properties?.description) {
-        layer.bindPopup(feature.properties.description.value);
-      }
-    },
-pointToLayer: function (feature, latlng) {
-  const color = feature.properties["icon-color"] || "#a52714";
-
-  return L.circleMarker(latlng, {
-    radius: 6,
-    fillColor: color,
-    color: "#000",
-    weight: 1,
-    opacity: 1,
-    fillOpacity: feature.properties["icon-opacity"] || 0.8
-  });
-}
-
-  }).addTo(map);
-}
-
-// Generate and show initial layer
-const regionList = extractRegions(quarriesData.features);
-populateRegionFilter(regionList);
-showQuarriesByRegion("all");
-
-// Event listener for region selection
-const regionForm = document.getElementById('region-form');
-if (regionForm) {
-  regionForm.addEventListener('change', (e) => {
-    showQuarriesByRegion(e.target.value);
-  });
-}
-
 // -----------------------
 // Layer Toggle Logic
 // -----------------------
@@ -107,12 +60,13 @@ const baseLayers = {
   "Satellite": satelliteMap
 };
 
-const overlays = {
-  "Quarries": currentLayer
-};
+// create an empty group that will hold the markers
+const quarryGroup = L.layerGroup().addTo(map);
 
-const layerControl = L.control.layers(baseLayers, overlays, { collapsed: false });
-layerControl.addTo(map);
+// put that group in the layer-control overlay list
+const overlays = { 'Quarries': quarryGroup };
+L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
+
 
 map.whenReady(() => {
   const leafletLayerBox = document.querySelector('.leaflet-control-layers');
@@ -133,5 +87,80 @@ if (toggleButton) {
   toggleButton.addEventListener('click', () => {
     const wrapper = document.getElementById('layer-box-wrapper');
     wrapper.style.display = wrapper.style.display === 'block' ? 'none' : 'block';
+  });
+}
+
+const quarryIcon = L.icon({
+  iconUrl: 'quarry-icon.png',   // make sure the PNG is in the same folder
+  iconSize:  [16, 16],
+  iconAnchor:[8, 8],
+  popupAnchor:[0, -8],
+  // optional for retina displays:
+  // iconRetinaUrl: 'quarry-icon@2x.png'
+});
+
+
+
+// 2.  Update the main filter layer to use that icon
+function showQuarriesByRegion (region) {
+  quarryGroup.clearLayers();                       // wipe previous markers
+
+  const filtered = (region === 'all')
+    ? quarriesData.features
+    : quarriesData.features.filter(f => {
+        const m = f.properties?.name?.match(/Region:\s*([^\n]+)/);
+        return m && m[1].trim() === region;
+      });
+
+  L.geoJSON(
+    { type: 'FeatureCollection', features: filtered },
+    {
+      /* ── draw BOTH the circle and the icon ─────────────────────── */
+      pointToLayer: (feature, latlng) => {
+        const colour = feature.properties['icon-color'] || '#a52714';
+
+        // background circle (keeps your red / orange coding)
+        const circle = L.circleMarker(latlng, {
+          radius      : 12,
+          fillColor   : colour,
+          color       : '#000',   // thin outline
+          weight      : 1,
+          opacity     : 1,
+          fillOpacity : feature.properties['icon-opacity'] ?? 0.8
+        });
+
+        // foreground pick-axe icon (no interaction needed)
+        const icon   = L.marker(latlng, {
+          icon        : quarryIcon,   // white PNG you generated
+          interactive : false,        // so only the circle gets clicks
+          zIndexOffset: 1000          // sit on top of the circle
+        });
+
+        // return them as one logical unit
+        return L.layerGroup([circle, icon]);
+      },
+
+      /* ── optional popup on the *circle* ────────────────────────── */
+      onEachFeature: (feature, layerGroup) => {
+        if (feature.properties?.description) {
+          // first child == the circleMarker (because we added it first)
+          layerGroup.getLayers()[0].bindPopup(feature.properties.description.value);
+        }
+      }
+    }
+  ).addTo(quarryGroup);
+}
+
+
+// Generate and show initial layer
+const regionList = extractRegions(quarriesData.features);
+populateRegionFilter(regionList);
+showQuarriesByRegion("all");
+
+// ─── Wire up region filter radio buttons ─────────────────────
+const regionForm = document.getElementById('region-form');
+if (regionForm) {
+  regionForm.addEventListener('change', e => {
+    showQuarriesByRegion(e.target.value);
   });
 }
